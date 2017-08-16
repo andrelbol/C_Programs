@@ -57,3 +57,5 @@ int queue_size (queue_t *queue) ;
 // void print_elem (void *ptr) ; // ptr aponta para o elemento a imprimir
 
 void queue_print (char *name, queue_t *queue, void print_elem (void*) ) ;
+
+#endif
