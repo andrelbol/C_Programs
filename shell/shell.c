@@ -86,9 +86,8 @@ runcmd(struct cmd *cmd)
     /* MARK START task3
      * TAREFA3: Implemente codigo abaixo para executar
      * comando com redirecionamento. */
-    int file = open(rcmd->file, rcmd->mode, S_IRWXU | S_IRWXO | S_IRWXG);
-    dup2(file, rcmd->fd);
-    close(file);
+    close(rcmd->fd); // Closing file descriptor so the open gets the stdout
+    int file = open(rcmd->file, rcmd->mode, S_IRWXU);
     /* MARK END task3 */
     runcmd(rcmd->cmd);
     break;
@@ -98,7 +97,18 @@ runcmd(struct cmd *cmd)
     /* MARK START task4
      * TAREFA4: Implemente codigo abaixo para executar
      * comando com pipes. */
-    fprintf(stderr, "pipe nao implementado\n");
+
+    pipe(p);
+    if(fork() == 0){ // Child process is gonna read on pipe
+      dup2(p[1], 1);
+      close(p[0]);
+      close(0);
+      runcmd(pcmd->left);
+    } else {  // Father process is gonna write on pipe 
+      dup2(p[0], 0);
+      close(p[1]);
+      runcmd(pcmd->right);
+    }
     /* MARK END task4 */
     break;
   }
