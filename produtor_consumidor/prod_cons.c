@@ -2,6 +2,8 @@
 #include <stdlib.h>
 #include <pthread.h>
 #include <semaphore.h>
+#include <unistd.h>
+#include <time.h>
 
 #include "queue.h"
 
@@ -23,11 +25,12 @@ typedef struct int_queue_t
 int_queue_t *buffer;
 
 // Semaphores
-sem_t *s_buffer, *s_item, *s_vaga;
+sem_t s_buffer, s_item, s_vaga;
 
 // Produtor e Consumidor
 
-void produtor(){
+void *produtor(void *id){
+  long tid = (long) id;
   int pause;
   int_queue_t *item;
   while(1){
@@ -50,12 +53,13 @@ void produtor(){
     sem_post(&s_item);
 
     // Print result
-    printf("A Thread X produziu ");
-    print_elem(item);
+    printf("A Thread %ld produziu %d\n", tid, item->id);
   }
+  pthread_exit(NULL);
 }
 
-void consumidor(){
+void *consumidor(void *id){
+  long tid = (long) id;
   int pause;
   int_queue_t *aux;
   while(1){
@@ -64,34 +68,24 @@ void consumidor(){
     sem_wait(&s_buffer);
 
     // Remove item
-    aux = buffer->prev; // Get the last elem of the queue
-    queue_remove((queue_t **) &buffer, (queue_t *) aux);
+    aux = (int_queue_t *) queue_remove((queue_t **) &buffer, (queue_t *) buffer);
 
     // Leave critical session
     sem_post(&s_buffer);
     sem_post(&s_vaga);
-    print_elem(aux);
+    printf("A Thread %ld consumiu %d.\n", tid, aux->id);
     pause = rand()%RAND_SLEEP_ATTR;
     sleep(pause);
   }
+
+  pthread_exit(NULL);
 }
 
-void print_elem (void *ptr)
-// Given an element, print it on the screen
-{
-  int_queue_t *elem = ptr ;
 
-  if (!elem)
-  return ;
-
-  elem->prev ? printf ("%d", elem->prev->id) : printf ("*") ;
-  printf ("<%d>", elem->id) ;
-  elem->next ? printf ("%d", elem->next->id) : printf ("*") ;
-}
 
 //Main
 
-int main(){
+int main(int argc, char const *argv[]){
   // Initializing semaphores
   // Buffer semaphore is binary
   sem_init(&s_buffer, 0, 1);
@@ -101,5 +95,29 @@ int main(){
 
   // Item semaphore starts nulled
   sem_init(&s_item, 0, 0);
+
+  long i=0, retval; // Threads iterator
+  pthread_t produtors[NUM_PRODUTORS];
+  pthread_t consumers[NUM_CONSUMERS];
+
+  // Produtors
+  for(i=0; i < NUM_PRODUTORS; i++){
+    retval =pthread_create(&produtors[i], NULL, produtor, (void *) i);
+    if(retval){
+      perror("pthread_create");
+      exit(1);
+    }
+  }
+
+  // Consumers
+  for(i=0; i < NUM_CONSUMERS; i++){
+    retval = pthread_create(&consumers[i], NULL, consumidor, (void *) i + NUM_PRODUTORS);
+    if(retval){
+      perror("pthread_create");
+      exit(1);
+    }
+  }
+
+  pthread_exit(NULL);
   return 0;
 }
