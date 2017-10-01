@@ -58,4 +58,8 @@ int queue_size (queue_t *queue) ;
 
 void queue_print (char *name, queue_t *queue, void print_elem (void*) ) ;
 
+//------------------------------------------------------------------------------
+
+int empty_queue(queue_t **queue);
+
 #endif
