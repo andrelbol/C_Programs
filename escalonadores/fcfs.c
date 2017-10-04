@@ -41,7 +41,7 @@ int cpu_state = FREE;
 
 // Other ones
 int t = 0;
-int task_quantity;
+int task_quantity=0;
 
 
 
@@ -90,23 +90,21 @@ void print_current_state(){
   task_queue_t *iterator;
 
   printf("%d- %d\t", t, (t+1));
-  iterator = all_tasks;
-  do {
-    if(iterator->state == EXEC){
-      printf("##");
+  for(i=0; i<task_quantity; i++){
+    if(i == current_task->id){
+      printf("##\t");
+    } else {
+      printf("--\t");
     }
-    else{
-      printf("--");
-    }
-    printf("\t");
-  } while(iterator != all_tasks);
+  }
+  printf("\n");
 
 }
 
 int main(int argc, char const *argv[]){
-  int task_finish_time;  // Mark the finish time of the current task
   task_queue_t *iterator; // User for iterating in queue
-  int i=0;
+  task_queue_t *aux; // User for iterating in queue
+  int i=0, size;
 
 
   printf("Digite quantos processos você deseja: \n");
@@ -122,6 +120,7 @@ int main(int argc, char const *argv[]){
     if(cpu_state == BUSY){ // If there is a task in cpu
       if(current_task->current_duration == current_task->all_duration){
         current_task->state = ENDED; // Finish the task
+        // Process isn't in any queue, so it's not necessary to remove from another one
         queue_append((queue_t **) ended_tasks, (queue_t *) current_task);
         current_task = NULL; // No current task
         cpu_state = FREE;
@@ -131,22 +130,23 @@ int main(int argc, char const *argv[]){
 
     // Verifying if there is a task to start now
     iterator = all_tasks;
-    do {  // For each task
+    size = queue_size((queue_t *) all_tasks);
+    for(i=0; i<size; i++){
       if(iterator->begin == t){
-        // queue_remove((queue_t **) all_tasks, (queue_t *) iterator);
-        // queue_append((queue_t **) ready_tasks, (queue_t *) iterator);
+        aux = iterator->next; // Save the next element to continue with the for
+        queue_remove((queue_t **) &all_tasks, (queue_t *) iterator);
+        queue_append((queue_t **) &ready_tasks, (queue_t *) iterator);
         iterator->state = READY;
       }
-      iterator = iterator->next;
-    } while(iterator != ready_tasks);
+      iterator = aux;
+    }
+    
 
     // Adding a new task to cpu if it's free
     if(cpu_state == FREE){
       if(ready_tasks != NULL){
-        // current_task = (task_queue_t *) queue_remove((queue_t **) ready_tasks, (queue_t *) ready_tasks);
-        current_task = ready_tasks;
+        current_task = (task_queue_t *) queue_remove((queue_t **) &ready_tasks, (queue_t *) ready_tasks);
         current_task->state = EXEC;
-        printf("DEBUG\n");
       }
     }
 
