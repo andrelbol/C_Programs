@@ -20,14 +20,19 @@
 // Max time
 #define TMAX 20
 
+// Default quantum time
+#define DEFAULT_QUANTUM 3
+
 typedef struct task_queue_t {
   struct task_queue_t *prev;
   struct task_queue_t *next;
   int id; // Identificator
   int begin, end; // Begin time and End time of the Task
-  int all_duration, current_duration; // Needed duration and how long it is in processor
+  int all_duration, current_duration; // Needed duration and how long it has been in processor
+  int cpu_duration; // How long task has been in cpu consecutvely
   int static_priority, dynamic_priority;
   int state; // Current state
+  int quantum;
 } task_queue_t;
 
 // Global Variables
@@ -56,8 +61,10 @@ task_queue_t *create_task(int id, int created_at, int exec_time, int priority){
   new_task->static_priority = priority;
   new_task->dynamic_priority = 0;
   new_task->end = created_at + exec_time;
-  new_task->current_duration = 0;
+  new_task->current_duration = 1; // Gamby
   new_task->state = NEW;
+  new_task->cpu_duration = 0;
+  new_task->quantum = DEFAULT_QUANTUM;
 
   return new_task;
 }
@@ -131,8 +138,15 @@ int main(int argc, char const *argv[]){
       }
       else{
         current_task->current_duration++;
+        current_task->cpu_duration++;
+        if(current_task->cpu_duration == current_task->quantum){ // End of quantum time
+          current_task->state = READY;
+          current_task->cpu_duration = 0;
+          cpu_state = FREE;
+          queue_append((queue_t **) &ready_tasks, (queue_t *) current_task);
+          current_task = NULL;
+        }
       }
-      /* Here would enter the quantum verification in Round Robin method*/
     }
 
     // Verifying if there is a task to start now
